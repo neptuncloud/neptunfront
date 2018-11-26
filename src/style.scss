@@ -1,0 +1,142 @@
+
+.headerLabel {
+  text-decoration: none;
+  color: black;
+}
+
+.itemLink a  {
+  text-decoration: none;
+  font-weight: bold;
+  color: #444444;
+}
+
+
+.dialogtable {
+  overflow: auto;
+  padding: 0;
+  width: 100%;
+}
+
+.dialog table {
+  width: 95%;
+}
+
+html ::placeholder {
+   color: black;
+}
+
+button.trashButton {
+       padding: 3px;
+       border-radius: 8px;
+}
+
+button.addButton {
+       padding: 3px;
+       border-radius: 8px;
+}
+
+button.projectButton {
+       padding: 3px 10px 3px 10px;
+       border-radius: 8px;
+}
+
+
+
+.itemsTable {
+   width: 100%;
+}
+
+.itemsTable tr th:first-child {
+   width: 60%;
+}
+
+.dialogtable table tr th:first-child {
+   width: 90%;
+}
+
+.netsTable tr th:first-child {
+   width: 40%;
+}
+
+.ordersTable tr th:first-child {
+   width: 40%;
+}
+
+.mainbox .addButton {
+   border-radius: 10px;
+   width: 180px;
+} 
+
+.dialog input {
+  color: white;
+  background: black;
+}
+
+
+.dialog input[name=vmname] {
+  color: white;
+  background: black;
+}
+
+.dialog input[name=cpu] {
+  color: white;
+  background: black;
+  width: 100px;
+}
+
+.dialog input[name=ram] {
+  color: white;
+  background: black;
+  width: 100px;
+}
+
+.dialog .selectorWrapper {
+  color: white;
+  background: black;
+  width: 300px;
+}
+
+.dialog .selectorWrapper button {
+  color: white;
+  background: black;
+}
+
+
+.dialog .selectorGroupWrapper {
+  color: white;
+  background: #7d4cdb;
+  width: 300px;
+}
+
+.dialog .selectorGroupWrapper div {
+  border: 0;
+}
+
+.dialog .selectorGroupWrapper input {
+  color: white;
+  background: #7d4cdb;
+  width: 300px;
+}
+
+.dialog .netSelector {
+  color: white;
+  background: black;
+  width: 259px;
+}
+
+.dialog .addButton {
+  width: 100px;
+}
+
+.mainbox {
+  float: left;
+  width: 70%;
+}
+.toolbox {
+  float: right;
+  height: 300px;
+}
+
+.toolsmenu {
+  padding: 0px;
+}

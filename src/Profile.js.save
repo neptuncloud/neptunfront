@@ -1,0 +1,265 @@
+import React, { Component } from 'react';
+import { Select, Heading, Layer, Text, TextInput, DataTable, Button, Box,  Grommet } from 'grommet';
+import { Add, Close, FormClose, StatusGood, Trash } from "grommet-icons"
+import auth from './auth';
+import api from './api';
+import './style.scss';
+import jwt_decode from 'jwt-decode';
+
+var config = require('./appconfig');
+
+const AppBar = (props) => (
+<Box 
+  tag='header'
+  direction='row'
+  align='center'
+  justify='between'
+  background='brand'
+  pad={{ left: 'medium', right: 'small', vertical: 'small' }}
+  elevation='medium'
+  style={{ zIndex: '100', fontWeight: 'bold' }}
+  {...props}
+/>
+);
+
+const Main = (props) => (
+<Box 
+  tag='div'
+  align='left'
+  gap="medium"
+  background='neutral-4'
+  pad="medium"
+  width="large"
+  className="mainbox"
+  {...props}
+/>
+);
+
+const Dialog = (props) => (
+<Box 
+  tag='div'
+  align='left'
+  gap="medium"
+  background='neutral-4'
+  pad="medium"
+  width="large"
+  className="dialog"
+  {...props}
+/>
+);
+
+
+class App extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { profiles: [],
+                   newProfile: false,
+                   newProfileName: '',
+                   deleteProfile: false,
+                   deleteProfileName: '',
+                   deleteProfileId: '',
+                   jwt: '',
+                   datacenters: [],
+                   datacenter: '',
+                   datastores: [],
+                   datastore: '',
+                   resourcepools: [],
+                   resourcepool: '',
+                   networks: [],
+                   network: '',
+                   vms: [],
+                   vmsuggestions: [],
+                   template: '',
+
+                 }
+  }
+
+  getVSphere = (type,callback) => {
+    api.getVSphere(type,callback);
+  }
+  
+  getProfiles = (jwt) => {
+    api.get('profiles',jwt,(res) => { 
+          if (!Array.isArray(res)) res=[res]; 
+          console.log(res);        
+          var profiles = []
+          for (var i = 0; i < res.length; i++) {
+             var _id = res[i]._id;
+             var name = res[i].Name;
+             res[i].Button = <Button key={_id} className="trashButton" icon=<Trash /> primary={true} color="light-1" plain={true} value={_id} 
+                onClick={(event) => { this.setState({deleteProfile:true,deleteProfileName:name,deleteProfileId:_id}); }} />;
+             res[i].Name = <Text className="itemLink" key={"t"+_id} size="large"><a href={"/profile/"+_id} >{res[i].Name}</a></Text>
+             res[i].owner = res[i].owner.username;
+             profiles.push(res[i]);
+          }
+          this.setState({profiles: profiles});
+    });
+
+  }
+
+  deleteProfile = (_id) => {
+                     api.delete('profiles',this.state.deleteProfileId,this.state.jwt,(res) => {
+                        this.onClose();
+                        this.getProfiles(this.state.jwt);
+                     });
+                }
+
+
+  componentDidMount() {
+     console.log("Mount");
+     var jwt = localStorage.getItem('jwt');
+      auth.checkLogin(jwt,(res) => {
+        console.log('GET jwt:'+res);
+        if(!res) {
+          window.location.replace(config.default.api+'/connect/ldapauth');
+        } 
+        
+      });
+
+    
+
+    this.setState({jwt:jwt});
+    this.getProfiles(jwt);
+    this.getVSphere('Datacenter',(res) => {
+       this.setState({ datacenters: res.sort() });
+    });
+    this.getVSphere('Datastore',(res) => {
+       this.setState({ datastores: res.sort() });
+    });
+    this.getVSphere('ResourcePool',(res) => {
+       this.getVSphere('ClusterComputeResource',(res) => {
+         this.setState({ rspools: res.sort() });
+       });
+
+       this.setState({ rspools: res.sort() });
+
+    });
+
+    this.getVSphere('Network',(res) => {
+       this.setState({ networks: res.sort() });
+    });
+    this.getVSphere('VirtualMachine',(res) => {
+       this.setState({ vms: res });
+    });
+  }
+
+
+  logout = () => {
+     localStorage.setItem('jwt','');
+     window.location.replace(config.default.api+'/connect/ldapauth');
+  };
+
+  newProfile = () => { this.setState({newProfile: true });   };
+ 
+  onClose = () => { this.setState({ newProfile: undefined, deleteProfile: undefined });   };
+
+  newProfileCreate = () => {
+    var user_id = jwt_decode(this.state.jwt)._id;
+    api.create('profiles',{ Name: this.state.newProfileName, owner:user_id },this.state.jwt,(res) => { 
+        console.log(res);         
+        this.getProfiles(this.state.jwt);
+        this.onClose();
+    });
+
+  };
+  
+  newProfileNameChange = event => this.setState({ newProfileName: event.target.value });
+  passChange = event => this.setState({ pass: event.target.value });
+
+  templateChange = event => { 
+     var vmsug = [];
+     for (var i = 0; i < this.state.vms.length; i++)
+       if(this.state.vms[i].toUpperCase().includes(event.target.value.toUpperCase()))
+          vmsug.push(this.state.vms[i]);
+
+     this.setState({ template: event.target.value, vmsuggestions: vmsug });
+  }
+
+  render() {
+    var columns = [ 
+                     { property:'Name', header: 'Profile', primary:true }, 
+                     { property:'owner', header: 'Owner', primary:false }, 
+                     { property:'Button', header: '', primary:false }, 
+                  ];
+
+    return (
+      <Grommet plain>
+        <AppBar>
+          <Text><a className="headerLabel" href="/" >Neptun</a></Text>
+          <Button label="Logout" primary={true} color="neutral-1" onClick={this.logout} />
+        </AppBar>
+        <Main>
+         <Button className="addButton" label="New Profile" icon=<Add />  color="neutral-1" onClick={this.newProfile} />
+         <DataTable className="itemsTable" columns={columns} data={this.state.profiles} />
+        </Main>
+        {this.state.newProfile && (
+         <Layer
+            position="center"
+            modal
+            onClickOutside={this.onClose}
+            onEsc={this.onClose}
+          >
+          <Dialog>
+          <TextInput  value={this.state.newProfileName}
+                      onChange={this.newProfileNameChange}
+                      size="small"
+                      placeholder="Profile Name"
+                      margin="medium" />
+          <Box fill className="selectorWrapper" >
+          <Select options={this.state.datacenters}
+                  placeholder="Select Datacenter" 
+                  value={this.state.datacenter}
+                  size="small"
+                  onChange={({option}) => this.setState({datacenter: option})} >
+          </Select></Box>
+          <Box fill className="selectorWrapper" >
+          <Select options={this.state.datastores}
+                  placeholder="Select Datastore" 
+                  value={this.state.datastore}
+                  size="small"
+                  onChange={({option}) => this.setState({datastore: option})} >
+          </Select></Box>
+          <Box fill className="selectorWrapper" >
+          <Select options={this.state.resourcepools}
+                  placeholder="Select ResourcePool" 
+                  value={this.state.resourcepool}
+                  size="small"
+                  onChange={({option}) => this.setState({resourcepool: option})} >
+          </Select></Box>
+          <Box fill className="selectorWrapper" >
+          <Select options={this.state.networks}
+                  placeholder="Select Network" 
+                  value={this.state.network}
+                  size="small"
+                  onChange={({option}) => this.setState({network: option})} >
+          </Select></Box>
+          <TextInput suggestions={this.state.vmsuggestions}
+                  placeholder="Select Template" 
+                  value={this.state.template}
+                  onChange={this.templateChange}
+                  size="small"
+                  onSelect={event => this.setState({ template: event.suggestion })} >
+          </TextInput>
+          <Button className="addButton" label="Create" primary={true} color="neutral-1" onClick={this.newProfileCreate}  />
+          </Dialog>
+          </Layer>
+        )}
+        {this.state.deleteProfile && (
+         <Layer
+            position="center"
+            modal
+            onClickOutside={this.onClose}
+            onEsc={this.onClose}
+          >
+          <Main>
+          <Text> Delete profile {this.state.deleteProfileName}? </Text>
+          <Button className="addButton" label="Delete" primary={true} color="neutral-1" onClick={this.deleteProfile}  />
+          </Main>
+          </Layer>
+        )}
+      </Grommet>
+    );
+  }
+}
+
+export default App;

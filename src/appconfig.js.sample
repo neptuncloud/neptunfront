@@ -1,0 +1,6 @@
+var config = {
+api: 'http://hostname-api.example.com'
+};
+
+export default config;
+
