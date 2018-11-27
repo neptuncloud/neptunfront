@@ -89,7 +89,8 @@ class Orders extends Component {
                    plan: '',
                    showPlan: false,
                    showApply: false,
-                   prepareDisabled: false
+                   prepareDisabled: false,
+                   timerId: 0
                  }
   }
 
@@ -344,7 +345,14 @@ class Orders extends Component {
  
   onClose = () => { this.setState({ newVM: undefined, deleteVM: undefined, editVM: undefined  });   };
 
-  onClosePlan = () => { this.setState({ showPlan: undefined, showApply: false  });   };
+  onClosePlan = () => { 
+     if (this.state.timerId != 0) 
+     {
+        clearInterval(this.state.timerId);
+        this.setState({ timerId: 0 });        
+     } 
+     this.setState({ showPlan: undefined, showApply: false  });        
+  };
 
   newVMPrepare = () => {
     if(this.state.editVM)
@@ -359,7 +367,7 @@ class Orders extends Component {
              this.onClose();
              var timerId = setInterval(() => {
                api.showLog({ vmname: this.state.newVMName },this.state.jwt,(res) => {
-               this.setState({ plan: convert.toHtml(res), showPlan: true});
+               this.setState({ plan: convert.toHtml(res), showPlan: true, timerId: timerId});
              });
              }, 500);
              api.prepareVM({ vmname: this.state.newVMName,
@@ -391,7 +399,7 @@ class Orders extends Component {
     {
       var timerId = setInterval(() => {
                api.showLog({ vmname: this.state.newVMName },this.state.jwt,(res) => {
-               this.setState({ plan: convert.toHtml(res), showPlan: false, showApply: true});
+               this.setState({ plan: convert.toHtml(res), showPlan: false, showApply: true, timerId: timerId});
              });
       }, 500);
 
