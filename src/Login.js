@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Button, Box,  TextInput, Grommet } from 'grommet';
+import { Text, Button, Box,  TextInput, Grommet } from 'grommet';
 import auth from './auth';
  
 const qs = require('query-string');
@@ -38,7 +38,9 @@ class Login extends Component {
                    fetching: true,
                    login: '',
                    pass: '',
-                   jwt: '' }
+                   jwt: '',
+                   authError: undefined
+                  }
     console.log(props);
   }
 
@@ -49,7 +51,8 @@ class Login extends Component {
       if(jwt) {    
           localStorage.setItem('jwt',jwt);
           window.location.replace('/'); 
-      }
+      } else
+      this.setState({authError: true});
     });
   }
 
@@ -89,6 +92,9 @@ class Login extends Component {
           Neptun
         </AppBar>
         <LoginBox>
+          {this.state.authError && (
+            <Text>Bad Credentials</Text>
+          )}
           <TextInput  value={this.state.login} 
                       onChange={this.loginChange}
                       size="small" 
