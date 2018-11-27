@@ -67,6 +67,44 @@ button.projectButton {
    width: 180px;
 } 
 
+.orderdialog div {
+   height: 24px;
+}
+
+.orderdialog input {
+  color: white;
+  background: black;
+}
+
+.orderdialog .selectorWrapper button {
+  color: white;
+  background: black;
+}
+
+
+.orderdialog .selectorGroupWrapper {
+  color: white;
+  background: #7d4cdb;
+  width: 300px;
+}
+
+.orderdialog .selectorGroupWrapper div {
+  border: 0;
+}
+
+.orderdialog .selectorGroupWrapper input {
+  color: white;
+  background: #7d4cdb;
+  width: 300px;
+}
+
+.orderdialog .selectorGroupWrapper input {
+  color: white;
+  background: #7d4cdb;
+  width: 300px;
+}
+
+
 .dialog input {
   color: white;
   background: black;
@@ -139,4 +177,13 @@ button.projectButton {
 
 .toolsmenu {
   padding: 0px;
+}
+
+.plandialog {
+  font-family: monospace;
+  font-size: 10pt;
+  background: #111111;
+  color: white;
+  overflow: auto;
+  line-height: 14px;
 }

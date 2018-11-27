@@ -15,6 +15,30 @@ var api = {
     });
     
   },
+  prepareVM: async (data,jwt,callback) => {
+        if(!jwt) {
+          callback(false);
+        } else
+        {
+               console.log("API PREPARE");
+               axios.post(config.default.api+'/terraform/prepare', data,
+                  {
+                           headers: {
+                               Authorization: "Bearer "+jwt
+                           },
+                 })
+                 .then(res => {
+                    console.log(res.status);
+                    if (res.status === 200)
+                      callback(res.data); else
+                      callback(false);
+                 })
+                 .catch(function (error) {
+                      console.log(error);
+                      callback(false);
+                 });
+        }    
+  },
   provideVM: async (data,jwt,callback) => {
         if(!jwt) {
           callback(false);
@@ -22,6 +46,30 @@ var api = {
         {
                console.log("API PROVIDE");
                axios.post(config.default.api+'/terraform/provide', data,
+                  {
+                           headers: {
+                               Authorization: "Bearer "+jwt
+                           },
+                 })
+                 .then(res => {
+                    console.log(res.status);
+                    if (res.status === 200)
+                      callback(res.data); else
+                      callback(false);
+                 })
+                 .catch(function (error) {
+                      console.log(error);
+                      callback(false);
+                 });
+        }    
+  },
+  showLog: async (data,jwt,callback) => {
+        if(!jwt) {
+          callback(false);
+        } else
+        {
+               console.log("API PROVIDE");
+               axios.post(config.default.api+'/terraform/log', data,
                   {
                            headers: {
                                Authorization: "Bearer "+jwt

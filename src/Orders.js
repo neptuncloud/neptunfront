@@ -1,10 +1,13 @@
 import React, { Component } from 'react';
-import { Select,  Layer, Text, TextInput, DataTable, Button, Box,  Grommet } from 'grommet';
+import { InfiniteScroll, CheckBox, Select,  Layer, Text, TextInput, DataTable, Button, Box,  Grommet } from 'grommet';
 import { VirtualMachine, Trash } from "grommet-icons"
 import auth from './auth';
 import api from './api';
 import './style.scss';
 import AppMenu from './Menu';
+
+var Convert = require('ansi-to-html');
+var convert = new Convert({newline:true});
 
 var config = require('./appconfig');
 
@@ -46,6 +49,18 @@ const Dialog = (props) => (
 />
 );
 
+const PlanDialog = (props) => (
+<Box 
+  tag='div'
+  gap="medium"
+  background='neutral-4'
+  pad="medium"
+  width="large"
+  className="plandialog"
+  {...props}
+/>
+);
+
 
 class Orders extends Component {
   constructor(props) {
@@ -70,7 +85,11 @@ class Orders extends Component {
                    profile: '',
                    vmsuggestions: [],
                    template: '',
-
+                   manualip: false,
+                   plan: '',
+                   showPlan: false,
+                   showApply: false,
+                   prepareDisabled: false
                  }
   }
 
@@ -101,6 +120,7 @@ class Orders extends Component {
 
   changeNet = (option) => {
     var netData = this.state.netsdict[option.value];
+        
     api.getFreeIPs(netData.ip,(res) => {
         this.setState({freeips:res, ip:res[0]});
     });
@@ -120,8 +140,10 @@ class Orders extends Component {
   renderVM = (data) => {
      return ( <Button key={"vm"+data._id} className="projectButton" icon=<VirtualMachine /> primary={true} color="light-1" plain={true} label={data.Name.name}
                 onClick={(event) => { 
-                                              api.getFreeIPs(data.Name.ip,(res) => {
-                                                   this.setState({freeips:res, ip:res[0]});
+                                              api.getFreeIPs(data.Name.netip,(res) => { 
+                                                   if(!this.state.ip)                                                    
+                                                     this.setState({freeips:res, ip:res[0], prepareDisabled: false}); else
+                                                     this.setState({freeips:res, prepareDisabled: false});
                                               });
                                               this.setState({editVM:true,
                                                         newVMName:data.Name.name,
@@ -135,9 +157,10 @@ class Orders extends Component {
                                                         resourcepool: data.Name.resourcepool,
                                                         template: data.Name.template,
 							vlan: data.Name.vlan,
-                                                        ip: 'Checking...',
+                                                        ip: data.Name.ip,
                                                         gateway: data.Name.gateway,
-                                                        mask: data.Name.mask
+                                                        mask: data.Name.mask,
+                                                        prepareDisabled: true
                                                         }); }} /> );
 
   }
@@ -177,10 +200,11 @@ class Orders extends Component {
              var vlan = '';
              var gateway = '192.168.0.1';
              var mask = 0;
-             var ip = '192.168.0.2/24';
+             var netip = '192.168.0.1/32';           
+             var ip = res[i].ip;
              if ( network !== undefined ) { 
                vlan = network.vlan;
-               ip = network.ip;
+               netip = network.ip;
                gateway = network.gateway;
                var pmask = network.ip.split('/');
                if(pmask.length > 0) mask = pmask[1];
@@ -201,6 +225,7 @@ class Orders extends Component {
                                 template: template,
                                 vlan: vlan,
                                 ip: ip,
+                                netip: netip,
                                 gateway: gateway,
                                 mask: mask
                          };
@@ -317,13 +342,28 @@ class Orders extends Component {
 
   newVM = () => { this.setState({newVM: true });   };
  
-  onClose = () => { this.setState({ newVM: undefined, deleteVM: undefined, editVM: undefined });   };
+  onClose = () => { this.setState({ newVM: undefined, deleteVM: undefined, editVM: undefined  });   };
 
-  newVMProvide = () => {
+  onClosePlan = () => { this.setState({ showPlan: undefined, showApply: false  });   };
+
+  newVMPrepare = () => {
     if(this.state.editVM)
     {
-      api.provideVM({ vmname: this.state.newVMName,
-                            vlan: this.state.network,
+      api.update('vms',this.state.editVMId, { Name: this.state.newVMName,
+                            Net: this.state.netsdict[this.state.network],
+                            Profile: this.state.profilesdict[this.state.profile],
+                            CPU: this.state.cpu,
+                            RAM: this.state.ram,
+                            ip: this.state.ip
+                             },this.state.jwt,(res) => {
+             this.onClose();
+             var timerId = setInterval(() => {
+               api.showLog({ vmname: this.state.newVMName },this.state.jwt,(res) => {
+               this.setState({ plan: convert.toHtml(res), showPlan: true});
+             });
+             }, 500);
+             api.prepareVM({ vmname: this.state.newVMName,
+                            vlan: this.state.vlan,
                             datacenter: this.state.datacenter,
                             datastore: this.state.datastore,
                             resourcepool: this.state.resourcepool,
@@ -334,9 +374,36 @@ class Orders extends Component {
                             gateway: this.state.gateway,
                             mask: this.state.mask
                              },this.state.jwt,(res) => {
-        console.log(res);
-        this.getVMs(this.state.jwt);
-        this.onClose();
+              api.showLog({ vmname: this.state.newVMName },this.state.jwt,(res) => {
+                this.setState({ plan: convert.toHtml(res), showPlan: true});
+                clearInterval(timerId);
+              });
+
+             this.getVMs(this.state.jwt);
+          });
+      });
+ 
+    }
+  };
+
+  newVMProvide = () => {
+    if(this.state.showPlan)
+    {
+      var timerId = setInterval(() => {
+               api.showLog({ vmname: this.state.newVMName },this.state.jwt,(res) => {
+               this.setState({ plan: convert.toHtml(res), showPlan: false, showApply: true});
+             });
+      }, 500);
+
+      api.provideVM({ vmname: this.state.newVMName },this.state.jwt,(res) => {
+            api.showLog({ vmname: this.state.newVMName },this.state.jwt,(res) => {
+               this.setState({ plan: convert.toHtml(res), showApply: true});
+               clearInterval(timerId); 
+             });
+           if(res == 0) 
+             api.update('vms',this.state.editVMId, { State: 'VM' },this.state.jwt,(res) => {
+                             this.getVMs(this.state.jwt);
+                           });
       });
     }
   };
@@ -345,7 +412,9 @@ class Orders extends Component {
   passChange = event => this.setState({ pass: event.target.value });
   cpuChange = event => this.setState({ cpu: event.target.value });
   ramChange = event => this.setState({ ram: event.target.value });
-
+  ipChange = event => this.setState({ ip: event.target.value });
+  manualipChange = event => this.setState({ manualip: event.target.checked });
+  
   templateChange = event => { 
      var vmsug = [];
      for (var i = 0; i < this.state.templates.length; i++)
@@ -354,6 +423,15 @@ class Orders extends Component {
 
      this.setState({ template: event.target.value, vmsuggestions: vmsug });
   }
+
+  scrollToBottom = () => {
+     console.log("SCROLL");
+     this.messageList.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  }
+  componentDidUpdate = () => {
+    if (this.messageList)
+      this.scrollToBottom();
+  } 
 
   render() {
     var columns = [ 
@@ -391,7 +469,7 @@ class Orders extends Component {
                       size="small"
                       placeholder="VM Name"
                       margin="medium" />
-          <Text><strong>Profile</strong></Text>
+          Profile
           <Box fill className="selectorGroupWrapper" >
           <Select options={this.state.profiles}
                   placeholder="Select Profile" 
@@ -427,7 +505,7 @@ class Orders extends Component {
                   size="small"
                   onSelect={event => this.setState({ template: event.suggestion })} >
           </TextInput>
-          <Text><strong>Network</strong></Text>
+          Network
           <Box fill className="selectorGroupWrapper" >
           <Select options={this.state.nets}
                   placeholder="Select Network" 
@@ -442,6 +520,7 @@ class Orders extends Component {
                   size="small"
                   onChange={({option}) => this.setState({vlan: option})} >
           </Select></Box>
+          {!this.state.manualip && (
           <Box fill className="selectorWrapper" >
           <Select options={this.state.freeips}
                   placeholder="Select IP"
@@ -449,7 +528,22 @@ class Orders extends Component {
                   size="small"
                   onChange={({option}) => this.setState({ip: option})} >
           </Select></Box>
-          <Text><strong>Resources</strong></Text>
+          )}
+          {this.state.manualip && (
+          <TextInput
+                  suggestions={["IP"]}
+                  placeholder="IP"
+                  value={this.state.ip}
+                  onChange={this.ipChange}
+                  size="xsmall" >
+          </TextInput>
+          )}
+          <CheckBox
+            label="Manual"
+            checked={this.state.manualip}
+            onChange={this.manualipChange}
+          />
+          Resources
           <TextInput 
                   suggestions={["CPU"]}
                   placeholder="CPU" 
@@ -466,9 +560,22 @@ class Orders extends Component {
 
           </TextInput>
           {(this.state.editVM && (
-          <Button className="addButton" label="Provide" primary={true} color="neutral-1" onClick={this.newVMProvide}  />
+          <Button className="addButton" label="Prepare" primary={true} color="neutral-1" onClick={this.newVMPrepare} disabled={this.state.prepareDisabled} />
           ))}
           </Dialog>
+          </Layer>
+        )}
+        {(this.state.showPlan || this.state.showApply) && (
+         <Layer
+            position="center"
+            modal
+            onEsc={this.onClosePlan}
+          >
+          <PlanDialog>
+          <div ref={(div) => { this.messageList = div; }} dangerouslySetInnerHTML={{ __html: this.state.plan}} />
+          <Button className="addButton" label="Provide" primary={true} color="neutral-1" onClick={this.newVMProvide} disabled={this.state.showApply} />
+          <Button className="addButton" label="Close" primary={true} color="neutral-4" onClick={this.onClosePlan} />
+          </PlanDialog>
           </Layer>
         )}
         {this.state.deleteVM && (
@@ -484,6 +591,7 @@ class Orders extends Component {
           </Main>
           </Layer>
         )}
+
         <AppMenu />
       </Grommet>
     );

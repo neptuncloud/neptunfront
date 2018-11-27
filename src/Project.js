@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Select,  Layer, Text, TextInput, DataTable, Button, Box,  Grommet } from 'grommet';
-import { Add, VirtualMachine, Trash } from "grommet-icons"
+import { Add, Cycle, VirtualMachine, Trash } from "grommet-icons"
 import auth from './auth';
 import api from './api';
 import './style.scss';
@@ -47,6 +47,18 @@ const Dialog = (props) => (
 />
 );
 
+const DeleteDialog = (props) => (
+<Box
+  tag='div'
+  gap="medium"
+  background='neutral-5'
+  pad="medium"
+  width="large"
+  className="deletedialog"
+  {...props}
+/>
+);
+
 
 class App extends Component {
   constructor(props) {
@@ -57,6 +69,9 @@ class App extends Component {
                    deleteVM: false,
                    deleteVMName: '',
                    deleteVMId: '',
+                   reorderVM: false,
+                   reorderVMName: '',
+                   reorderVMId: '',
                    editVM: false,
                    editVMId: '',
                    jwt: '',
@@ -82,6 +97,10 @@ class App extends Component {
     this.setState({deleteVM:true,deleteVMName:event.target.name,deleteVMId:event.target.value});
   }
 
+  reorderVMDialog = (event) => {
+    this.setState({reorderVM:true,reorderVMName:event.target.name,reorderVMId:event.target.value});
+  }
+
 
   renderVM = (data) => {
      return ( <Button key={"vm"+data._id} className="projectButton" icon=<VirtualMachine /> primary={true} color="light-1" plain={true} label={data.Name.name}
@@ -98,6 +117,10 @@ class App extends Component {
 
   renderTrashButton = (data) => {
      return ( <Button key={"trash"+data._id} name={data.Button.name} className="trashButton" icon=<Trash /> primary={true} color="light-1" plain={true} value={data._id} onClick={this.deleteVMDialog} /> );
+  }
+
+  renderReorderButton = (data) => {
+     return ( <Button key={"reorded"+data._id} name={data.Button.name} className="trashButton" icon=<Cycle /> primary={true} color="light-1" plain={true} value={data._id} onClick={this.reorderVMDialog} /> );
   }
 
 
@@ -166,12 +189,14 @@ class App extends Component {
                            this.getVMs(this.state.jwt,this.state.project);
                            this.onClose();
                          });
-/*
-                     api.delete('vms',this.state.deleteVMId,this.state.jwt,(res) => {
-                        this.onClose();
-                        this.getVMs(this.state.jwt,this.state.project);
-                     });
-*/
+                }
+
+  reorderVM = (_id) => {
+                        api.update('vms',this.state.reorderVMId, { State: 'Order'
+                             },this.state.jwt,(res) => {
+                           this.getVMs(this.state.jwt,this.state.project);
+                           this.onClose();
+                         });
                 }
 
 
@@ -205,7 +230,7 @@ class App extends Component {
 
   newVM = () => { this.setState({newVM: true });   };
  
-  onClose = () => { this.setState({ newVM: undefined, deleteVM: undefined, editVM: undefined });   };
+  onClose = () => { this.setState({ newVM: undefined, deleteVM: undefined, editVM: undefined, reorderVM: undefined });   };
 
   newVMCreate = () => {
     if(this.state.newVM)
@@ -259,8 +284,10 @@ class App extends Component {
                      { property:'Name', header: 'VM', primary:true, render: this.renderVM  }, 
                      { property:'Profile', header: 'Profile', primary:false }, 
                      { property:'Net', header: 'Net', primary:false }, 
+                     { property:'ip', header: 'IP', primary:false }, 
                      { property:'State', header: 'State', primary:false }, 
                      { property:'Button', header: '', primary:false, render: this.renderTrashButton }, 
+                     { property:'Button', header: '', primary:false, render: this.renderReorderButton }, 
                   ];
 
     return (
@@ -330,10 +357,23 @@ class App extends Component {
             onClickOutside={this.onClose}
             onEsc={this.onClose}
           >
-          <Main>
-          <Text> Delete vm {this.state.deleteVMName}? </Text>
+          <DeleteDialog>
+          <Text> Delete VM {this.state.deleteVMName}? </Text>
           <Button className="addButton" label="Delete" primary={true} color="neutral-1" onClick={this.deleteVM}  />
-          </Main>
+          </DeleteDialog>
+          </Layer>
+        )}
+        {this.state.reorderVM && (
+         <Layer
+            position="center"
+            modal
+            onClickOutside={this.onClose}
+            onEsc={this.onClose}
+          >
+          <DeleteDialog>
+          <Text> Reorder VM {this.state.deleteVMName}? </Text>
+          <Button className="addButton" label="Reorder" primary={true} color="neutral-1" onClick={this.reorderVM}  />
+          </DeleteDialog>
           </Layer>
         )}
         <AppMenu />
