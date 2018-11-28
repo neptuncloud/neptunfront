@@ -5,6 +5,7 @@ import Project from './Project';
 import Login from './Login';
 import Profile from './Profile';
 import Net from './Net';
+import Storage from './Storage';
 import Orders from './Orders';
 
 import {
@@ -23,6 +24,7 @@ ReactDOM.render(
             <Route path="/project"  component={Project} />
             <Route path="/profiles"  component={Profile} />
             <Route path="/nets"  component={Net} />
+            <Route path="/storages"  component={Storage} />
             <Route path="/orders"  component={Orders} />
             <Route exact path="/"  component={App} />
             <Redirect to="/" />

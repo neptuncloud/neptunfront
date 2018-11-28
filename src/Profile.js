@@ -46,6 +46,18 @@ const Dialog = (props) => (
 />
 );
 
+const DeleteDialog = (props) => (
+<Box 
+  tag='div'
+  gap="medium"
+  background='neutral-4'
+  pad="medium"
+  width="large"
+  className="deletedialog"
+  {...props}
+/>
+);
+
 
 class App extends Component {
   constructor(props) {
@@ -68,7 +80,10 @@ class App extends Component {
                    vms: [],
                    vmsuggestions: [],
                    template: '',
-
+                   storages: [],
+                   storagesdict: [],
+                   storage: ''
+ 
                  }
   }
 
@@ -78,8 +93,8 @@ class App extends Component {
 
   renderTrashButton = (data) => {
      return (
-      <Button key={data.Button.id} className="trashButton" icon=<Trash /> primary={true} color="light-1" plain={true} value={data.Button.id}
-                onClick={(event) => { this.setState({deleteProfile:true,deleteProfileName:data.Button.name,deleteProfileId:data.Button.id}); }} /> );
+      <Button key={data.Name.id} className="trashButton" icon=<Trash /> primary={true} color="light-1" plain={true} value={data.Name.id}
+                onClick={(event) => { this.setState({deleteProfile:true,deleteProfileName:data.Name.name,deleteProfileId:data.Name.id}); }} /> );
   }
 
   renderProfile = (data) => {
@@ -89,13 +104,26 @@ class App extends Component {
                                                         newProfileName:data.Name.name,
                                                         editProfileId:data.Name.id,
                                                         datacenter: data.Name.datacenter,
-                                                        datastore: data.Name.datastore,
+                                                        storage: data.Name.storage,
                                                         resourcepool: data.Name.resourcepool,
                                                         template: data.Name.template
                                                         }); }} />
      );
   }
   
+  getStorages = (jwt) => {
+     api.get('storages',jwt,(res) => {
+          if (!Array.isArray(res)) res=[res];
+          var storages = [];
+          var storagesdict = [];
+          for(var i = 0; i < res.length; i++) {
+             storages.push(res[i].Name);
+             storagesdict[res[i].Name] = res[i]._id;
+          }
+          this.setState({ storages: storages, storagesdict: storagesdict });
+     });
+  }
+
   getProfiles = (jwt) => {
     api.get('profiles',jwt,(res) => { 
           if (!Array.isArray(res)) res=[res]; 
@@ -107,17 +135,19 @@ class App extends Component {
              console.log("TEST");
              var name = res[i].Name;
              var datacenter = res[i].Datacenter;
-             var datastore = res[i].Datastore;
+             var storage = res[i].Storage;
+             if ( storage != undefined )
+               storage = storage.Name;
              var resourcepool = res[i].ResourcePool;
              var template = res[i].Template;
 
-             res[i].Button = { id: _id, name: name };
-
+             res[i].Button = "Del"+name;
+             res[i].Object = name;      
              res[i].Name =  {
 			     name:name,
 			     id:_id,
 			     datacenter: datacenter,
-			     datastore: datastore,
+			     storage: storage,
 			     resourcepool: resourcepool,
 			     template: template
                             }
@@ -152,6 +182,7 @@ class App extends Component {
     this.setState({profiles: [{Name:'Loading...'}]});
     this.setState({jwt:jwt});
     this.getProfiles(jwt);
+    this.getStorages(jwt);
     this.getVSphere('Datacenter',(res) => {
        this.setState({ datacenters: res.sort() });
     });
@@ -192,7 +223,7 @@ class App extends Component {
     {
     api.create('profiles',{ Name: this.state.newProfileName, 
                             Datacenter: this.state.datacenter,
-                            Datastore: this.state.datastore,
+                            Storage: this.state.storagesdict[this.state.storage],
                             ResourcePool: this.state.resourcepool,
                             Template: this.state.template
                              },this.state.jwt,(res) => { 
@@ -205,7 +236,7 @@ class App extends Component {
     {
     api.update('profiles',this.state.editProfileId, { Name: this.state.newProfileName, 
                             Datacenter: this.state.datacenter,
-                            Datastore: this.state.datastore,
+                            Storage: this.state.storagesdict[this.state.storage],
                             ResourcePool: this.state.resourcepool,
                             Template: this.state.template
                              },this.state.jwt,(res) => { 
@@ -230,7 +261,7 @@ class App extends Component {
 
   render() {
     var columns = [ 
-                     { property:'Name', header: 'Profile', primary:true, render: this.renderProfile }, 
+                     { property:'Object', header: 'Profile', primary:true, render: this.renderProfile }, 
                      { property:'Button', header: '', primary:false, render: this.renderTrashButton }, 
                   ];
 
@@ -265,11 +296,11 @@ class App extends Component {
                   onChange={({option}) => this.setState({datacenter: option})} >
           </Select></Box>
           <Box fill className="selectorWrapper" >
-          <Select options={this.state.datastores}
-                  placeholder="Select Datastore" 
-                  value={this.state.datastore}
+          <Select options={this.state.storages}
+                  placeholder="Select Storage" 
+                  value={this.state.storage}
                   size="small"
-                  onChange={({option}) => this.setState({datastore: option})} >
+                  onChange={({option}) => this.setState({storage: option})} >
           </Select></Box>
           <Box fill className="selectorWrapper" >
           <Select options={this.state.resourcepools}
@@ -301,10 +332,10 @@ class App extends Component {
             onClickOutside={this.onClose}
             onEsc={this.onClose}
           >
-          <Main>
+          <DeleteDialog>
           <Text> Delete profile {this.state.deleteProfileName}? </Text>
           <Button className="addButton" label="Delete" primary={true} color="neutral-1" onClick={this.deleteProfile}  />
-          </Main>
+          </DeleteDialog>
           </Layer>
         )}
         <AppMenu />

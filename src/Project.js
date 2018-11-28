@@ -91,14 +91,14 @@ class App extends Component {
     api.getVSphere(type,callback);
   }
   
-  deleteVMDialog = (event) => {
-    console.log('vmid:'+event.target.value);
-    console.log('name:'+event.target.name);
-    this.setState({deleteVM:true,deleteVMName:event.target.name,deleteVMId:event.target.value});
+  deleteVMDialog = (id,name) => {
+    console.log('vmid:'+id);
+    console.log('name:'+name);
+    this.setState({deleteVM:true,deleteVMName:name,deleteVMId:id});
   }
 
-  reorderVMDialog = (event) => {
-    this.setState({reorderVM:true,reorderVMName:event.target.name,reorderVMId:event.target.value});
+  reorderVMDialog = (id,name) => {
+    this.setState({reorderVM:true,reorderVMName:name,reorderVMId:id});
   }
 
 
@@ -116,11 +116,12 @@ class App extends Component {
   }
 
   renderTrashButton = (data) => {
-     return ( <Button key={"trash"+data._id} name={data.Button.name} className="trashButton" icon=<Trash /> primary={true} color="light-1" plain={true} value={data._id} onClick={this.deleteVMDialog} /> );
+     console.log(data);
+     return ( <Button key={"trash"+data.Name.id} name={data.Button.name} className="trashButton" icon=<Trash /> primary={true} color="light-1" plain={true} value={data.Name.id} onClick={() => {this.deleteVMDialog(data.Name.id,data.Name.name);}} /> );
   }
 
   renderReorderButton = (data) => {
-     return ( <Button key={"reorded"+data._id} name={data.Button.name} className="trashButton" icon=<Cycle /> primary={true} color="light-1" plain={true} value={data._id} onClick={this.reorderVMDialog} /> );
+     return ( <Button key={"reorded"+data.Name.id} name={data.Button.name} className="trashButton" icon=<Cycle /> primary={true} color="light-1" plain={true} value={data.Name.id} onClick={() => {this.reorderVMDialog(data.Name.id,data.Name.name);}} /> );
   }
 
 
@@ -140,7 +141,11 @@ class App extends Component {
              var network = res[i].Net;
              if ( network !== undefined ) network = network.Name
 
-             res[i].Button = { id: _id, name: name };
+             res[i].Button = "Button";
+//{ id: _id, name: name };
+             res[i].Reorder = "Reorder";
+//{ id: _id, name: name };
+             res[i].Object = name;
              res[i].Name = { id: _id, name: name, profile: profile, cpu: cpu, ram: ram, network: network };
              res[i].Profile = profile;
              res[i].Net = network;
@@ -281,13 +286,13 @@ class App extends Component {
 
   render() {
     var columns = [ 
-                     { property:'Name', header: 'VM', primary:true, render: this.renderVM  }, 
+                     { property:'Object', header: 'VM', primary:true, render: this.renderVM  }, 
                      { property:'Profile', header: 'Profile', primary:false }, 
                      { property:'Net', header: 'Net', primary:false }, 
                      { property:'ip', header: 'IP', primary:false }, 
                      { property:'State', header: 'State', primary:false }, 
                      { property:'Button', header: '', primary:false, render: this.renderTrashButton }, 
-                     { property:'Button', header: '', primary:false, render: this.renderReorderButton }, 
+                     { property:'Reorder', header: '', primary:false, render: this.renderReorderButton }, 
                   ];
 
     return (
@@ -298,7 +303,7 @@ class App extends Component {
         </AppBar>
         <Main>
          <Button className="addButton" label="New VM" icon=<Add />  color="neutral-1" onClick={this.newVM} />
-         <DataTable primaryPropery="property" name="itemsTable" className="itemsTable" columns={columns} data={this.state.vms} />
+         <DataTable primaryPropery="property" name="vmsTable" className="vmsTable" columns={columns} data={this.state.vms} />
         
         </Main>
         {(this.state.newVM || this.state.editVM) && (

@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { InfiniteScroll, CheckBox, Select,  Layer, Text, TextInput, DataTable, Button, Box,  Grommet } from 'grommet';
+import { CheckBox, Select,  Layer, Text, TextInput, DataTable, Button, Box,  Grommet } from 'grommet';
 import { VirtualMachine, Trash } from "grommet-icons"
 import auth from './auth';
 import api from './api';
@@ -44,7 +44,31 @@ const Dialog = (props) => (
   background='neutral-4'
   pad="medium"
   width="large"
-  className="dialog"
+  className="orderdialog"
+  {...props}
+/>
+);
+
+const DialogLeft = (props) => (
+<Box 
+  tag='div'
+  gap="medium"
+  background='neutral-4'
+  pad="medium"
+  width="large"
+  className="dialogleft"
+  {...props}
+/>
+);
+
+const DialogRight = (props) => (
+<Box 
+  tag='div'
+  gap="medium"
+  background='neutral-4'
+  pad="medium"
+  width="large"
+  className="dialogright"
   {...props}
 />
 );
@@ -83,6 +107,8 @@ class Orders extends Component {
                    profilesdict: [],
                    profiles: [],
                    profile: '',
+                   storages: [],
+                   storagesdict: [],
                    vmsuggestions: [],
                    template: '',
                    manualip: false,
@@ -96,6 +122,10 @@ class Orders extends Component {
 
   getVSphere = (type,callback) => {
     api.getVSphere(type,callback);
+  }
+
+  getVSphereDatastores = (callback) => {
+    api.getVSphereDatastores(callback);
   }
   
   deleteVMDialog = (event) => {
@@ -117,6 +147,31 @@ class Orders extends Component {
                    resourcepool: profileData.ResourcePool,
                    template: profileData.Template
                    });
+  }
+
+  changeStorage = (option) => {
+    var storage = this.state.storagesdict[option.value];
+    if (storage !== undefined) {
+      var datastores = [];
+      for(var j = 0; j < storage.datastores.length; j++)
+        datastores.push(storage.datastores[j].Name);
+      var maxFree = -1;
+      var datastore = '';
+      for(var i = 0; i < datastores.length; i++) {
+        var free = this.state.alldatastores[datastores[i]].freeSpace;
+        if (free > maxFree ) {
+           datastore = datastores[i];
+           maxFree = free;
+        }
+      }
+
+      this.setState({ storage: option.value, datastores: datastores, datastore: datastore, freeSpace: maxFree });
+    }
+  }
+
+  changeDatastore = (option) => {
+    var freeSpace = this.state.alldatastores[option.value].freeSpace;
+    this.setState({ datastore: option.value, freeSpace: freeSpace });
   }
 
   changeNet = (option) => {
@@ -146,6 +201,15 @@ class Orders extends Component {
                                                      this.setState({freeips:res, ip:res[0], prepareDisabled: false}); else
                                                      this.setState({freeips:res, prepareDisabled: false});
                                               });
+                                              var maxFree = -1;
+                                              var datastore = '';
+                                              for(var i = 0; i < data.Name.datastores.length; i++) {
+                                                 var free = this.state.alldatastores[data.Name.datastores[i]].freeSpace;
+                                                 if (free > maxFree ) {
+                                                    datastore = data.Name.datastores[i];
+                                                    maxFree = free;
+                                                 }
+                                              }
                                               this.setState({editVM:true,
                                                         newVMName:data.Name.name,
                                                         editVMId:data.Name.id,
@@ -154,7 +218,10 @@ class Orders extends Component {
                                                         cpu: data.Name.cpu.toString(),
                                                         ram: data.Name.ram.toString(),
                                                         datacenter: data.Name.datacenter,
-                                                        datastore: data.Name.datastore,
+                                                        storage: data.Name.storage,
+                                                        datastores: data.Name.datastores,
+                                                        datastore: datastore,
+							freeSpace: maxFree,
                                                         resourcepool: data.Name.resourcepool,
                                                         template: data.Name.template,
 							vlan: data.Name.vlan,
@@ -173,6 +240,7 @@ class Orders extends Component {
   getVMsByState = (jwt,state) => {
 
     api.getFilter('vms',jwt,'State='+state,(res) => { 
+       this.getStorages(jwt,(storagesdict) => {
           if (!Array.isArray(res)) res=[res]; 
           console.log(res);        
           var vms = []
@@ -183,14 +251,22 @@ class Orders extends Component {
              var profile = res[i].Profile;
              var profileName = '';
              var datacenter = '';
-             var datastore = '';
+             var datastores = [];
+             var storage = '';
              var resourcepool = '';
              var template = '';   
              if ( profile !== undefined ) 
              { 
 		profileName = profile.Name
                 datacenter = profile.Datacenter;
-                datastore = profile.Datastore;
+                console.log(storagesdict);
+                storage = storagesdict[profile.Storage];
+                console.log(storage);
+                if (storage !== undefined) {
+                     for(var j = 0; j < storage.datastores.length; j++)             
+                       datastores.push(storage.datastores[j].Name);
+                     storage = storage.Name;        
+                }
                 resourcepool = profile.ResourcePool;
                 template = profile.Template;
              }
@@ -222,7 +298,8 @@ class Orders extends Component {
 				network: network,
 				datacenter: datacenter,
                                 resourcepool: resourcepool,
-                                datastore: datastore,
+                                datastores: datastores,
+                                storage: storage,
                                 template: template,
                                 vlan: vlan,
                                 ip: ip,
@@ -240,6 +317,7 @@ class Orders extends Component {
             this.setState({vms: vms});
           if(state === 'Removed')
             this.setState({deletevms: vms});
+        });
     });
 
   }
@@ -261,6 +339,24 @@ class Orders extends Component {
           }
           console.log(netsdict);
           this.setState({nets: nets, netsdict: netsdict});
+    });
+
+  }
+
+  getStorages = (jwt,callback) => {
+    api.get('storages',jwt,(res) => {
+          if (!Array.isArray(res)) res=[res];
+          var storages = [];
+          var storagesdict = [];
+          var storagesiddict = [];
+          for (var i = 0; i < res.length; i++)
+          {
+            storages.push(res[i].Name) 
+            storagesdict[res[i].Name] = res[i];
+            storagesiddict[res[i]._id] = res[i];
+          }
+          this.setState({storages: storages, storagesdict: storagesdict, storagesiddict: storagesiddict});
+          callback(storagesiddict);
     });
 
   }
@@ -304,14 +400,17 @@ class Orders extends Component {
     
 
     this.setState({jwt:jwt});
-    this.getVMs(jwt);
     this.getNets(jwt);
     this.getProfiles(jwt);
+    this.getVMs(jwt);
     this.getVSphere('Datacenter',(res) => {
        this.setState({ datacenters: res.sort() });
     });
-    this.getVSphere('Datastore',(res) => {
-       this.setState({ datastores: res.sort() });
+    this.getVSphereDatastores((res) => {
+       var alldatastores = [];
+       for(var i = 0; i < res.length; i++) 
+          alldatastores[res[i][0]] = { capacity: res[i][1], freeSpace: res[i][2] };
+       this.setState({ alldatastores: alldatastores });
     });
     this.getVSphere('ResourcePool',(pools) => {
       this.getVSphere('ClusterComputeResource',(clusters) => {
@@ -346,7 +445,7 @@ class Orders extends Component {
   onClose = () => { this.setState({ newVM: undefined, deleteVM: undefined, editVM: undefined  });   };
 
   onClosePlan = () => { 
-     if (this.state.timerId != 0) 
+     if (this.state.timerId !== 0) 
      {
         clearInterval(this.state.timerId);
         this.setState({ timerId: 0 });        
@@ -367,7 +466,8 @@ class Orders extends Component {
              this.onClose();
              var timerId = setInterval(() => {
                api.showLog({ vmname: this.state.newVMName },this.state.jwt,(res) => {
-               this.setState({ plan: convert.toHtml(res), showPlan: true, timerId: timerId});
+               if(res !== false)
+                 this.setState({ plan: convert.toHtml(res), showPlan: true, timerId: timerId});
              });
              }, 500);
              api.prepareVM({ vmname: this.state.newVMName,
@@ -383,6 +483,7 @@ class Orders extends Component {
                             mask: this.state.mask
                              },this.state.jwt,(res) => {
               api.showLog({ vmname: this.state.newVMName },this.state.jwt,(res) => {
+               if(res !== false)
                 this.setState({ plan: convert.toHtml(res), showPlan: true});
                 clearInterval(timerId);
               });
@@ -399,12 +500,14 @@ class Orders extends Component {
     {
       var timerId = setInterval(() => {
                api.showLog({ vmname: this.state.newVMName },this.state.jwt,(res) => {
+               if(res !== false)
                this.setState({ plan: convert.toHtml(res), showPlan: false, showApply: true, timerId: timerId});
              });
       }, 500);
 
       api.provideVM({ vmname: this.state.newVMName },this.state.jwt,(res) => {
             api.showLog({ vmname: this.state.newVMName },this.state.jwt,(res) => {
+               if(res !== false)
                this.setState({ plan: convert.toHtml(res), showApply: true});
                clearInterval(timerId); 
              });
@@ -477,6 +580,8 @@ class Orders extends Component {
                       size="small"
                       placeholder="VM Name"
                       margin="medium" />
+          <table><tr><td>
+          <DialogLeft>
           Profile
           <Box fill className="selectorGroupWrapper" >
           <Select options={this.state.profiles}
@@ -492,13 +597,22 @@ class Orders extends Component {
                   size="small"
                   onChange={({option}) => this.setState({datacenter: option})} >
           </Select></Box>
+          Storage
+          <Box fill className="selectorGroupWrapper" >
+          <Select options={this.state.storages}
+                  placeholder="Select Storage"
+                  value={this.state.storage}
+                  size="small"
+                  onChange={this.changeStorage} >
+          </Select></Box>
           <Box fill className="selectorWrapper" >
           <Select options={this.state.datastores}
                   placeholder="Select Datastore"
                   value={this.state.datastore}
                   size="small"
-                  onChange={({option}) => this.setState({datastore: option})} >
+                  onChange={this.changeDatastore} >
           </Select></Box>
+          <Text className="freelabel" >Free:{Math.round(this.state.freeSpace/1024/1024/1024)} GB</Text>
           <Box fill className="selectorWrapper" >
           <Select options={this.state.resourcepools}
                   placeholder="Select ResourcePool"
@@ -513,7 +627,10 @@ class Orders extends Component {
                   size="small"
                   onSelect={event => this.setState({ template: event.suggestion })} >
           </TextInput>
-          Network
+          </DialogLeft>
+          </td><td>
+          <DialogRight>
+          <Text>Network</Text>
           <Box fill className="selectorGroupWrapper" >
           <Select options={this.state.nets}
                   placeholder="Select Network" 
@@ -570,6 +687,7 @@ class Orders extends Component {
           {(this.state.editVM && (
           <Button className="addButton" label="Prepare" primary={true} color="neutral-1" onClick={this.newVMPrepare} disabled={this.state.prepareDisabled} />
           ))}
+          </DialogRight></td></tr></table>
           </Dialog>
           </Layer>
         )}
@@ -581,8 +699,10 @@ class Orders extends Component {
           >
           <PlanDialog>
           <div ref={(div) => { this.messageList = div; }} dangerouslySetInnerHTML={{ __html: this.state.plan}} />
+          <div>
           <Button className="addButton" label="Provide" primary={true} color="neutral-1" onClick={this.newVMProvide} disabled={this.state.showApply} />
           <Button className="addButton" label="Close" primary={true} color="neutral-4" onClick={this.onClosePlan} />
+          </div>
           </PlanDialog>
           </Layer>
         )}

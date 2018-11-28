@@ -21,6 +21,7 @@
   width: 95%;
 }
 
+
 html ::placeholder {
    color: black;
 }
@@ -58,6 +59,10 @@ button.projectButton {
    width: 40%;
 }
 
+.vmsTable tr th:first-child {
+   width: 20%;
+}
+
 .ordersTable tr th:first-child {
    width: 40%;
 }
@@ -67,9 +72,12 @@ button.projectButton {
    width: 180px;
 } 
 
-.orderdialog div {
-   height: 24px;
-}
+.plandialog .addButton {
+   border-radius: 10px;
+   width: 100px;
+   margin-right: 20px;
+} 
+
 
 .orderdialog input {
   color: white;
@@ -86,6 +94,7 @@ button.projectButton {
   color: white;
   background: #7d4cdb;
   width: 300px;
+  height: 40px;
 }
 
 .orderdialog .selectorGroupWrapper div {
@@ -110,6 +119,9 @@ button.projectButton {
   background: black;
 }
 
+.dialog input[type=checkbox] {
+  height: 40px;
+}
 
 .dialog input[name=vmname] {
   color: white;
@@ -132,6 +144,7 @@ button.projectButton {
   color: white;
   background: black;
   width: 300px;
+  height: 50px;
 }
 
 .dialog .selectorWrapper button {
@@ -144,6 +157,7 @@ button.projectButton {
   color: white;
   background: #7d4cdb;
   width: 300px;
+  height: 40px;
 }
 
 .dialog .selectorGroupWrapper div {
@@ -164,6 +178,14 @@ button.projectButton {
 
 .dialog .addButton {
   width: 100px;
+  height: 40px;
+  display: inline-block;
+}
+
+.dialog .adddsButton {
+  width: 200px;
+  height: 40px;
+  display: inline-block;
 }
 
 .mainbox {
@@ -172,7 +194,7 @@ button.projectButton {
 }
 .toolbox {
   float: right;
-  height: 300px;
+  height: 320px;
 }
 
 .toolsmenu {
@@ -185,5 +207,26 @@ button.projectButton {
   background: #111111;
   color: white;
   overflow: auto;
-  line-height: 14px;
+  line-height: 16px;
+  width: 1000px;
+}
+
+
+.dialogleft {
+  width: 400px;
+  display: inline-block;
+  vertical-align: top;
+}
+.dialogright {
+  width: 400px;
+}
+
+.orderdialog {
+  width: 1000px;
+  height: 700px;
+  overflow: none;
+}
+
+.orderdialog table td {
+  vertical-align: top;
 }

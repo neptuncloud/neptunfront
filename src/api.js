@@ -15,6 +15,12 @@ var api = {
     });
     
   },
+  getVSphereDatastores: async (callback) => {
+    axios.get(config.default.api+'/vsphere/Datastore/Capacity').then((res) => {
+        callback(res.data);
+    });
+    
+  },
   prepareVM: async (data,jwt,callback) => {
         if(!jwt) {
           callback(false);
