@@ -461,7 +461,9 @@ class Orders extends Component {
                             Profile: this.state.profilesdict[this.state.profile],
                             CPU: this.state.cpu,
                             RAM: this.state.ram,
-                            ip: this.state.ip
+                            ip: this.state.ip,
+                            datastore: this.state.datastore,
+                            resourcepool: this.state.resourcepool
                              },this.state.jwt,(res) => {
              this.onClose();
              var timerId = setInterval(() => {
@@ -511,7 +513,7 @@ class Orders extends Component {
                this.setState({ plan: convert.toHtml(res), showApply: true});
                clearInterval(timerId); 
              });
-           if(res == 0) 
+           if(res === 0) 
              api.update('vms',this.state.editVMId, { State: 'VM' },this.state.jwt,(res) => {
                              this.getVMs(this.state.jwt);
                            });

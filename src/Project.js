@@ -142,9 +142,7 @@ class App extends Component {
              if ( network !== undefined ) network = network.Name
 
              res[i].Button = "Button";
-//{ id: _id, name: name };
              res[i].Reorder = "Reorder";
-//{ id: _id, name: name };
              res[i].Object = name;
              res[i].Name = { id: _id, name: name, profile: profile, cpu: cpu, ram: ram, network: network };
              res[i].Profile = profile;
@@ -290,6 +288,7 @@ class App extends Component {
                      { property:'Profile', header: 'Profile', primary:false }, 
                      { property:'Net', header: 'Net', primary:false }, 
                      { property:'ip', header: 'IP', primary:false }, 
+                     { property:'datastore', header: 'Datastore', primary:false }, 
                      { property:'State', header: 'State', primary:false }, 
                      { property:'Button', header: '', primary:false, render: this.renderTrashButton }, 
                      { property:'Reorder', header: '', primary:false, render: this.renderReorderButton }, 

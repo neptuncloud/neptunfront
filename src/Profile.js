@@ -136,7 +136,7 @@ class App extends Component {
              var name = res[i].Name;
              var datacenter = res[i].Datacenter;
              var storage = res[i].Storage;
-             if ( storage != undefined )
+             if ( storage !== undefined )
                storage = storage.Name;
              var resourcepool = res[i].ResourcePool;
              var template = res[i].Template;

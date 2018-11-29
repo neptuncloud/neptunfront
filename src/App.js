@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Layer, Text, TextInput, DataTable, Button, Box,  Grommet } from 'grommet';
-import { Add, Trash, FormLock } from "grommet-icons"
+import { Add, Edit, Trash, FormLock } from "grommet-icons"
 import auth from './auth';
 import api from './api';
 import './style.scss';
@@ -26,7 +26,6 @@ const AppBar = (props) => (
 const Main = (props) => (
 <Box 
   tag='div'
-  align='left'
   gap="medium"
   background='neutral-4'
   pad="medium"
@@ -98,6 +97,12 @@ class App extends Component {
             );
   }
 
+  renderEditButton = (data) => {
+     return ( <Button key={"ed"+data.Name.id} className="trashButton" icon=<Edit /> primary={true} color="light-1" plain={true} value={data.Name.id}
+                onClick={(event) => { this.setState({editProject:true,newProjectName:data.Name.name,editProjectId:data.Name.id}); }} />
+            );
+  }
+
   renderGrantTrashButton = (data) => {
      return ( <Button key={"del"+data.DelButton} className="trashButton" icon=<Trash /> primary={true} color="light-1" plain={true} value={data.DelButton}
                 onClick={(event) => {
@@ -153,6 +158,7 @@ class App extends Component {
              res[i].Button = { name:name, id:_id };
              res[i].Name = { name:name, id:_id };
              res[i].Grant = { name:name, id:_id, admins: grants };
+             res[i].Edit = { name:name, id:_id  };
              res[i].owner = res[i].owner.username;
              projects.push(res[i]);
           }
@@ -170,6 +176,7 @@ class App extends Component {
                res[i].Button = { name:name, id:_id };
                res[i].Name = { name:name, id:_id };
                res[i].Grant = { name:name, id:_id, admins: grants };
+               res[i].Edit = { name:name, id:_id  };
                res[i].owner = res[i].owner.username;
                projects.push(res[i]);
             }
@@ -214,7 +221,7 @@ class App extends Component {
 
   newProject = () => { this.setState({newProject: true });   };
  
-  onClose = () => { this.setState({ newProject: undefined, deleteProject: undefined, grantProject: undefined });   };
+  onClose = () => { this.setState({ newProject: undefined, deleteProject: undefined, grantProject: undefined, editProject: undefined });   };
 
   newProjectCreate = () => {
     var user_id = jwt_decode(this.state.jwt)._id;
@@ -226,8 +233,16 @@ class App extends Component {
 
   };
 
+  projectUpdate = () => {
+    api.update('projects',this.state.editProjectId,{ Name: this.state.newProjectName },this.state.jwt,(res) => { 
+        console.log(res);         
+        this.getProjects(this.state.jwt);
+        this.onClose();
+    });
+
+  };
+
   grantProject = () => {
-    var user_id = jwt_decode(this.state.jwt)._id;
     var admins = [];
     for(var i = 0; i < this.state.grants.length; i++) {
       admins.push(this.state.usersdict[this.state.grants[i].Username]); 
@@ -272,7 +287,8 @@ class App extends Component {
                      { property:'Name', header: 'Project', primary:true, render: this.renderProject }, 
                      { property:'owner', header: 'Owner', primary:false }, 
                      { property:'Button', header: '', primary:false, render: this.renderTrashButton }, 
-                     { property:'Grant', header: '', primary:false, render: this.renderGrantButton }
+                     { property:'Grant', header: '', primary:false, render: this.renderGrantButton },
+                     { property:'Edit', header: '', primary:false, render: this.renderEditButton } 
                   ];
 
     var grantColumns = [ 
@@ -291,7 +307,7 @@ class App extends Component {
          <Button className="addButton" label="New Project" icon=<Add />  color="neutral-1" onClick={this.newProject} />
          <DataTable className="itemsTable" columns={columns} data={this.state.projects} />
         </Main>
-        {this.state.newProject && (
+        {(this.state.newProject || this.state.editProject) && (
          <Layer
             position="center"
             modal
@@ -304,7 +320,13 @@ class App extends Component {
                       size="small"
                       placeholder="Project Name"
                       margin="medium" />
+          {this.state.newProject && (
           <Button className="addButton" label="Create"  primary={true} color="neutral-1" onClick={this.newProjectCreate}  />
+          )}
+          {this.state.editProject && (
+          <Button className="addButton" label="Save"  primary={true} color="neutral-1" onClick={this.projectUpdate}  />
+          )}
+
           </Dialog>
           </Layer>
         )}
@@ -330,7 +352,7 @@ class App extends Component {
             onEsc={this.onClose}
           >
           <Dialog>
-             <Text> Permissions for Project {this.state.grantProjectName} </Text>
+             <Text> <strong>GRANTS</strong> for {this.state.grantProjectName} </Text>
              <TextInput  value={this.state.newGrant}
                       onChange={this.newGrantChange}
                       size="small"
